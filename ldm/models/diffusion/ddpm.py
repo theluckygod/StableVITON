@@ -17,14 +17,13 @@ from functools import partial
 import itertools
 from tqdm import tqdm
 from torchvision.utils import make_grid
-from pytorch_lightning.utilities.distributed import rank_zero_only
+from pytorch_lightning.utilities.rank_zero import rank_zero_only
 from omegaconf import ListConfig
 from torchvision.transforms.functional import resize
 import torchvision.transforms as T
 import random
 import torch.nn.functional as F
-from diffusers.models.autoencoder_kl import AutoencoderKLOutput
-from diffusers.models.vae import DecoderOutput
+from diffusers.models.vae import AutoencoderKLOutput, DecoderOutput
 
 from ldm.util import log_txt_as_img, exists, default, ismap, isimage, mean_flat, count_params, instantiate_from_config
 from ldm.modules.ema import LitEma

@@ -11,13 +11,14 @@ class AbstractEncoder(nn.Module):
 
 class FrozenCLIPImageEmbedder(AbstractEncoder):
     """Uses the CLIP transformer encoder for text (from Hugging Face)"""
-    def __init__(self, version="openai/clip-vit-large-patch14"):
+    def __init__(self, version="openai/clip-vit-base-patch32"):
         super().__init__()
         self.transformer = CLIPVisionModel.from_pretrained(version)
-        self.final_ln = LayerNorm(1024)
+        emb_shape = self.transformer.vision_model.post_layernorm.normalized_shape[0]
+        self.final_ln = LayerNorm(emb_shape)
         self.mapper = Transformer(
                 1,
-                1024,
+                emb_shape,
                 5,
                 1,
             )

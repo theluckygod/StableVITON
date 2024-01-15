@@ -1,0 +1,12 @@
+diffusers==0.9.0
+accelerate>=0.16.0
+torchvision
+transformers>=4.21.0
+ftfy
+tensorboard
+Jinja2
+omegaconf
+einops
+pytorch_lightning
+xformers
+opencv-python
