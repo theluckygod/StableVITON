@@ -4,6 +4,7 @@ import math
 import os
 import random
 from pathlib import Path
+import re
 
 import numpy as np
 import torch
@@ -35,6 +36,7 @@ from diffusers.utils import check_min_version
 check_min_version("0.13.0.dev0")
 
 logger = get_logger(__name__)
+logger.setLevel("INFO")
 
 
 def prepare_mask_and_masked_image(image, mask):
@@ -100,6 +102,13 @@ def parse_args():
         default=None,
         required=True,
         help="A folder containing the training data of instance images.",
+    )
+    parser.add_argument(
+        "--instance_masks_data_dir",
+        type=str,
+        default=None,
+        required=True,
+        help="A folder containing the training data of instance images masks.",
     )
     parser.add_argument(
         "--class_data_dir",
@@ -294,6 +303,12 @@ def parse_args():
     return args
 
 
+# constructing unique propmt from image name
+def construct_prompt_by_image_name(img_name): 
+    prompt = re.findall('^.*(?=\s\()', img_name)[0]
+
+    return prompt
+
 class DreamBoothDataset(Dataset):
     """
     A dataset to prepare the instance and class images with the prompts for fine-tuning the model.
@@ -303,6 +318,7 @@ class DreamBoothDataset(Dataset):
     def __init__(
         self,
         instance_data_root,
+        instance_masks_data_root,
         instance_prompt,
         tokenizer,
         class_data_root=None,
@@ -318,8 +334,16 @@ class DreamBoothDataset(Dataset):
         if not self.instance_data_root.exists():
             raise ValueError("Instance images root doesn't exists.")
 
+        self.instance_masks_data_root = Path(instance_masks_data_root)
+        if not self.instance_masks_data_root.exists():
+            raise ValueError("Instance masks root doesn't exists.")
+        
         self.instance_images_path = list(Path(instance_data_root).iterdir())
+        self.instance_masks_path = list(Path(instance_masks_data_root).iterdir())
+
         self.num_instance_images = len(self.instance_images_path)
+        self.num_instance_masks = len(self.instance_masks_path)
+
         self.instance_prompt = instance_prompt
         self._length = self.num_instance_images
 
@@ -352,7 +376,10 @@ class DreamBoothDataset(Dataset):
 
     def __getitem__(self, index):
         example = {}
-        instance_image = Image.open(self.instance_images_path[index % self.num_instance_images])
+        inatance_image_path = self.instance_images_path[index % self.num_instance_images]
+        example["inatance_image_path"] = inatance_image_path
+
+        instance_image = Image.open(inatance_image_path)
         if not instance_image.mode == "RGB":
             instance_image = instance_image.convert("RGB")
         instance_image = self.image_transforms_resize_and_crop(instance_image)
@@ -360,8 +387,21 @@ class DreamBoothDataset(Dataset):
         example["PIL_images"] = instance_image
         example["instance_images"] = self.image_transforms(instance_image)
 
+        # loading image mask
+        instance_mask_path = str(self.instance_masks_data_root)+ '/' + os.path.basename(inatance_image_path)[:-4] + '.png'
+        instance_mask = Image.open(instance_mask_path)
+        if not instance_mask.mode == "RGB":
+            instance_mask = instance_mask.convert("RGB")
+        instance_mask = self.image_transforms_resize_and_crop(instance_mask)
+
+        example["PIL_mask_images"] = instance_mask
+        example["instance_mask_images"] = self.image_transforms(instance_mask)
+
+        image_prompt = construct_prompt_by_image_name(os.path.basename(inatance_image_path))
+
         example["instance_prompt_ids"] = self.tokenizer(
-            self.instance_prompt,
+            # self.instance_prompt,
+            image_prompt, 
             padding="do_not_pad",
             truncation=True,
             max_length=self.tokenizer.model_max_length,
@@ -536,6 +576,7 @@ def main():
 
     train_dataset = DreamBoothDataset(
         instance_data_root=args.instance_data_dir,
+        instance_masks_data_root=args.instance_masks_data_dir,
         instance_prompt=args.instance_prompt,
         class_data_root=args.class_data_dir if args.with_prior_preservation else None,
         class_prompt=args.class_prompt,
@@ -559,8 +600,8 @@ def main():
         masked_images = []
         for example in examples:
             pil_image = example["PIL_images"]
-            # generate a random mask
-            mask = random_mask(pil_image.size, 1, False)
+            # load existing mask
+            mask = example["PIL_mask_images"]
             # prepare mask and masked image
             mask, masked_image = prepare_mask_and_masked_image(pil_image, mask)
 
