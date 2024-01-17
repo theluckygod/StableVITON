@@ -1,0 +1,148 @@
+model:
+  base_learning_rate: 5.0e-07
+  target: cldm.cldm.ControlLDM
+  params:
+    linear_start: 0.00085
+    linear_end: 0.0120
+    num_timesteps_cond: 1
+    log_every_t: 200
+    timesteps: 1000
+    first_stage_key: "image"
+    first_stage_key_cond: ["agn", "agn_mask", "image_densepose"]
+    cond_stage_key: "cloth"
+    control_key: "cloth"
+    image_size: 64
+    channels: 4
+    cond_stage_trainable: true   # Note: different from the one we trained before
+    conditioning_key: crossattn
+    monitor: val_loss_ema
+    scale_factor: 0.18215
+    use_ema: False
+    only_mid_control: False
+    use_VAEdownsample: True
+    use_lastzc: True 
+    use_imageCLIP: True
+    use_pbe_weight: True
+    u_cond_percent: 0.2
+    use_attn_mask: False
+
+    control_stage_config:
+      target: cldm.warping_cldm_network.NoZeroConvControlNet
+      params:
+        image_size: 32
+        in_channels: 13
+        hint_channels: 3
+        model_channels: 160
+        attention_resolutions: [ 4, 2, 1 ]
+        num_res_blocks: 2
+        channel_mult: [ 1, 2, 4, 4 ]
+        num_heads: 8
+        use_spatial_transformer: True
+        transformer_depth: 1
+        context_dim: 768
+        use_checkpoint: True
+        legacy: False
+        cond_first_ch: 4  
+
+    scheduler_config: # 10000 warmup steps
+      target: ldm.lr_scheduler.LambdaLinearScheduler
+      params:
+        warm_up_steps: [ 300 ]
+        cycle_lengths: [ 10000000000000 ] # incredibly large number to prevent corner cases
+        f_start: [ 1.e-6 ]
+        f_max: [ 1. ]
+        f_min: [ 1. ]
+
+    unet_config:
+      target: cldm.warping_cldm_network.StableVITON
+      params:
+        image_size: 32
+        in_channels: 13
+        out_channels: 4
+        model_channels: 160
+        attention_resolutions: [ 4, 2, 1 ]
+        num_res_blocks: 2
+        channel_mult: [ 1, 2, 4, 4 ]
+        num_heads: 8
+        use_spatial_transformer: True
+        transformer_depth: 1
+        context_dim: 768
+        use_checkpoint: True
+        legacy: False
+        dim_head_denorm: 1
+
+    first_stage_config:
+      target: ldm.models.autoencoder.AutoencoderKL
+      params:
+        embed_dim: 4
+        monitor: val/rec_loss
+        ddconfig:
+          double_z: true
+          z_channels: 4
+          resolution: 256
+          in_channels: 3
+          out_ch: 3
+          ch: 128
+          ch_mult:
+          - 1
+          - 2
+          - 4
+          - 4
+          num_res_blocks: 2
+          attn_resolutions: []
+          dropout: 0.0
+        lossconfig:
+          target: torch.nn.Identity
+    validation_config:
+      ddim_steps: 50
+      eta: 0.0
+      scale: 1.0
+
+    cond_stage_config:
+      target: ldm.modules.image_encoders.modules.FrozenCLIPImageEmbedder
+
+default_prompt: ""
+log_images_kwargs:
+  unconditional_guidance_scale: 5.0
+
+lightning:
+  trainer:
+    max_epochs: 100
+    num_nodes: 1
+    accumulate_grad_batches: 1
+    accelerator: 'gpu'
+    gpus: "0,1"
+
+
+data:
+  target: main.DataModuleFromConfig
+  params:
+      batch_size: 5
+      wrap: False
+      train:
+          target: dataset.VITONHDDataset
+          params:
+              data_root_dir: ./data/zalando-hd-resized
+              img_H: 256
+              img_W: 192
+              is_paired: True
+              is_test: False
+              is_sorted: False
+      validation:
+          target: dataset.VITONHDDataset
+          params:
+              data_root_dir: ./data/zalando-hd-resized
+              img_H: 256
+              img_W: 192
+              is_paired: True
+              is_test: True
+              is_sorted: True
+      test:
+          target: dataset.VITONHDDataset
+          params:
+              data_root_dir: ./data/zalando-hd-resized
+              img_H: 256
+              img_W: 192
+              is_paired: True
+              is_test: True
+              is_sorted: True

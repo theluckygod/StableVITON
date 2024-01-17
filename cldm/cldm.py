@@ -29,6 +29,7 @@ class ControlLDM(LatentDiffusion):
             img_H=512,
             img_W=384,
             always_learnable_param=False,
+            only_agn_simple_loss=False,
             *args, 
             **kwargs
         ):
@@ -51,6 +52,7 @@ class ControlLDM(LatentDiffusion):
         self.first_stage_key_cond = kwargs.get("first_stage_key_cond", None)
         self.valid_config = validation_config
         self.use_VAEDownsample = use_VAEdownsample
+        self.only_agn_simple_loss = only_agn_simple_loss
     @torch.no_grad()
     def get_input(self, batch, k, bs=None, *args, **kwargs):
         x, c = super().get_input(batch, self.first_stage_key, *args, **kwargs)

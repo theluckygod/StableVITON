@@ -11,21 +11,22 @@ from torch.utils.data import DataLoader
 
 from cldm.plms_hacked import PLMSSampler
 from cldm.model import create_model
+from ldm.util import instantiate_from_config
 from utils import tensor2img
 
 def build_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--config_path", type=str)
-    parser.add_argument("--model_load_path", type=str)
-    parser.add_argument("--batch_size", type=int, default=16)
-    parser.add_argument("--data_root_dir", type=str, default="./DATA/zalando-hd-resized")
-    parser.add_argument("--repaint", action="store_true")
-    parser.add_argument("--unpair", action="store_true")
+    parser.add_argument("--config_path", type=str, default="./configs/train_VITON256.yaml")
+    parser.add_argument("--model_load_path", type=str, default="logs/2024-01-16T11-13-49_base/checkpoints/epoch=000010.ckpt")
+    parser.add_argument("--batch_size", type=int, default=1)
+    parser.add_argument("--data_root_dir", type=str, default="./data/zalando-hd-resized")
+    parser.add_argument("--repaint", action="store_true", default=False)
+    parser.add_argument("--unpair", action="store_true", default=False)
     parser.add_argument("--save_dir", type=str, default="./samples")
 
     parser.add_argument("--denoise_steps", type=int, default=50)
-    parser.add_argument("--img_H", type=int, default=512)
-    parser.add_argument("--img_W", type=int, default=384)
+    parser.add_argument("--img_H", type=int, default=256)
+    parser.add_argument("--img_W", type=int, default=192)
     parser.add_argument("--eta", type=float, default=0.0)
     args = parser.parse_args()
     return args
@@ -43,19 +44,12 @@ def main(args):
     params = config.model.params
 
     model = create_model(config_path=None, config=config)
-    model.load_state_dict(torch.load(args.model_load_path, map_location="cpu"))
+    model.load_state_dict(torch.load(args.model_load_path, map_location="cpu")["state_dict"])
     model = model.cuda()
     model.eval()
 
     sampler = PLMSSampler(model)
-    dataset = getattr(import_module("dataset"), config.dataset_name)(
-        data_root_dir=args.data_root_dir,
-        img_H=img_H,
-        img_W=img_W,
-        is_paired=not args.unpair,
-        is_test=True,
-        is_sorted=True
-    )
+    dataset = instantiate_from_config(config.data.params.test)
     dataloader = DataLoader(dataset, num_workers=4, shuffle=False, batch_size=batch_size, pin_memory=True)
 
     shape = (4, img_H//8, img_W//8) 
