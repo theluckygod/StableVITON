@@ -11,6 +11,8 @@ from torch.utils.data import random_split, DataLoader, Dataset, Subset
 from functools import partial
 from PIL import Image
 
+from termcolor import colored
+
 from pytorch_lightning import seed_everything
 from pytorch_lightning.trainer import Trainer
 from pytorch_lightning.callbacks import ModelCheckpoint, Callback, LearningRateMonitor
@@ -110,7 +112,7 @@ def get_parser(**parser_kwargs):
     parser.add_argument(
         "--pretrained_model",
         type=str,
-        default="",
+        default="logs/2024-01-16T17-03-47_base/checkpoints/last.ckpt",
         help="path to pretrained model",
     )
     parser.add_argument(
@@ -494,15 +496,21 @@ if __name__ == "__main__":
     config.model.params.img_H = opt.img_H
     config.model.params.img_W = opt.img_W
     model = create_model(config_path=None, config=config)
-    if opt.resume:
-        if opt.train_from_scratch:
-            ckpt_file=torch.load(opt.pretrained_model,map_location='cpu')['state_dict']
-            ckpt_file={key:value for key,value in ckpt_file.items() if not ( key[:6]=='model.')}
-            model.load_state_dict(ckpt_file,strict=False)
-            print("Train from scratch!")
-        else:
-            model.load_state_dict(torch.load(opt.pretrained_model,map_location='cpu')['state_dict'],strict=False)
-            print("Load Stable Diffusion v1-4!")
+    # if opt.resume:
+    #     if opt.train_from_scratch:
+    #         ckpt_file=torch.load(opt.pretrained_model,map_location='cpu')['state_dict']
+    #         ckpt_file={key:value for key,value in ckpt_file.items() if not ( key[:6]=='model.')}
+    #         model.load_state_dict(ckpt_file,strict=False)
+    #         print("Train from scratch!")
+    #     else:
+    if opt.pretrained_model:
+        model.load_state_dict(torch.load(opt.pretrained_model,map_location='cpu')['state_dict'],strict=True)
+        print(colored(f"Loaded from {opt.pretrained_model}", "red"))
+        
+        # if model.first_stage_model.ckpt_path is not None:
+        ckpt_path = "models/first_stage_models/kl-f8/model.ckpt"
+        model.first_stage_model.init_from_ckpt(ckpt_path)
+        print(colored(f"Loaded first_stage_model from {ckpt_path}", "red"))
 
     # trainer and callbacks
     trainer_kwargs = dict()
@@ -573,14 +581,14 @@ if __name__ == "__main__":
                 "lightning_config": lightning_config,
             }
         },
-        # "image_logger": {
-        #     "target": "main.ImageLogger",
-        #     "params": {
-        #         "batch_frequency": 500,
-        #         "max_images": 4,
-        #         "clamp": True
-        #     }
-        # },
+        "image_logger": {
+            "target": "main.ImageLogger",
+            "params": {
+                "batch_frequency": 500,
+                "max_images": 4,
+                "clamp": True
+            }
+        },
         "learning_rate_logger": {
             "target": "main.LearningRateMonitor",
             "params": {

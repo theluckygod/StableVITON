@@ -55,7 +55,10 @@ class ControlLDM(LatentDiffusion):
         self.only_agn_simple_loss = only_agn_simple_loss
     @torch.no_grad()
     def get_input(self, batch, k, bs=None, *args, **kwargs):
-        x, c = super().get_input(batch, self.first_stage_key, *args, **kwargs)
+        out = super().get_input(batch, self.first_stage_key, *args, **kwargs)
+        x = out[0]
+        c = out[1]
+        
         if isinstance(self.control_key, omegaconf.listconfig.ListConfig):
             control_lst = []
             for key in self.control_key:
@@ -80,13 +83,13 @@ class ControlLDM(LatentDiffusion):
             first_stage_cond = []
             for key in self.first_stage_key_cond:
                 if not "mask" in key:
-                    cond, _ = super().get_input(batch, key, *args, **kwargs)
+                    cond = super().get_input(batch, key, *args, **kwargs)[0]
                 else:
-                    cond, _ = super().get_input(batch, key, no_latent=True, *args, **kwargs)      
+                    cond = super().get_input(batch, key, no_latent=True, *args, **kwargs)[0]      
                 first_stage_cond.append(cond)
             first_stage_cond = torch.cat(first_stage_cond, dim=1)
             cond_dict["first_stage_cond"] = first_stage_cond
-        return x, cond_dict
+        return x, cond_dict, *out[2:]
 
     def apply_model(self, x_noisy, t, cond, *args, **kwargs):
         assert isinstance(cond, dict)       

@@ -1,5 +1,5 @@
 model:
-  base_learning_rate: 5.0e-07
+  base_learning_rate: 1.0e-06
   target: cldm.cldm.ControlLDM
   params:
     linear_start: 0.00085
@@ -109,7 +109,7 @@ lightning:
   trainer:
     max_epochs: 100
     num_nodes: 1
-    accumulate_grad_batches: 1
+    accumulate_grad_batches: 6
     accelerator: 'gpu'
     gpus: "0,1"
 
@@ -117,7 +117,7 @@ lightning:
 data:
   target: main.DataModuleFromConfig
   params:
-      batch_size: 5
+      batch_size: 6
       wrap: False
       train:
           target: dataset.VITONHDDataset
