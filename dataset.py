@@ -76,3 +76,35 @@ class VITONHDDataset(Dataset):
             img_fn=img_fn,
             cloth_fn=cloth_fn,
         )
+        
+        
+class AutoEncoder_VITONHDDataset(VITONHDDataset):
+    def __init__(
+            self, 
+            data_root_dir, 
+            img_H, 
+            img_W, 
+            is_test=False, 
+            is_sorted=False,             
+            **kwargs
+        ):
+        self.drd = data_root_dir
+        self.img_H = img_H
+        self.img_W = img_W
+        self.data_type = "train" if not is_test else "test"
+        self.is_test = is_test
+       
+        im_names = []
+        with open(opj(self.drd, f"{self.data_type}.txt"), "r") as f:
+            for line in f.readlines():
+                im_name = line.strip()
+                im_names.append(im_name)
+        if is_sorted:
+            im_names = sorted(im_names)
+        self.im_names = im_names
+        
+    def __getitem__(self, idx):
+        image = imread(opj(self.drd, self.data_type, "image", self.im_names[idx]), self.img_H, self.img_W)
+        return dict(
+            image=image,
+        )

@@ -55,7 +55,7 @@ def get_parser(**parser_kwargs):
     )
     parser.add_argument(
         "--config_path",
-        default="configs/train_VITON256.yaml",
+        default="configs/autoencoder/autoencoder.yaml",
     )
     parser.add_argument(
         "-t",
@@ -493,9 +493,11 @@ if __name__ == "__main__":
     lightning_config.trainer = trainer_config
 
     # model
-    config.model.params.img_H = opt.img_H
-    config.model.params.img_W = opt.img_W
-    model = create_model(config_path=None, config=config)
+    # config.model.params.img_H = opt.img_H
+    # config.model.params.img_W = opt.img_W
+    # model = create_model(config_path=None, config=config)
+    model = instantiate_from_config(config.model)
+    
     # if opt.resume:
     #     if opt.train_from_scratch:
     #         ckpt_file=torch.load(opt.pretrained_model,map_location='cpu')['state_dict']
