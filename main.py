@@ -112,7 +112,7 @@ def get_parser(**parser_kwargs):
     parser.add_argument(
         "--pretrained_model",
         type=str,
-        default="logs/2024-01-16T17-03-47_base/checkpoints/last.ckpt",
+        default="",
         help="path to pretrained model",
     )
     parser.add_argument(
@@ -131,8 +131,8 @@ def get_parser(**parser_kwargs):
         default=False,
         help="Train from scratch",
     )
-    parser.add_argument("--img_H", type=int, default=256)
-    parser.add_argument("--img_W", type=int, default=192)
+    parser.add_argument("--img_H", type=int, default=512)
+    parser.add_argument("--img_W", type=int, default=384)
     return parser
 
 
@@ -507,10 +507,10 @@ if __name__ == "__main__":
         model.load_state_dict(torch.load(opt.pretrained_model,map_location='cpu')['state_dict'],strict=True)
         print(colored(f"Loaded from {opt.pretrained_model}", "red"))
         
-        # if model.first_stage_model.ckpt_path is not None:
-        ckpt_path = "models/first_stage_models/kl-f8/model.ckpt"
-        model.first_stage_model.init_from_ckpt(ckpt_path)
-        print(colored(f"Loaded first_stage_model from {ckpt_path}", "red"))
+    #     # if model.first_stage_model.ckpt_path is not None:
+    #     ckpt_path = "models/first_stage_models/kl-f8/model.ckpt"
+    #     model.first_stage_model.init_from_ckpt(ckpt_path)
+    #     print(colored(f"Loaded first_stage_model from {ckpt_path}", "red"))
 
     # trainer and callbacks
     trainer_kwargs = dict()

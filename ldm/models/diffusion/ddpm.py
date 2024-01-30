@@ -642,9 +642,9 @@ class LatentDiffusion(DDPM):
     def instantiate_first_stage(self, config):
         model = instantiate_from_config(config)
         self.first_stage_model = model.eval()
-        # self.first_stage_model.train = disabled_train
+        self.first_stage_model.train = disabled_train
         for param in self.first_stage_model.parameters():
-            param.requires_grad = True
+            param.requires_grad = False
     
     def instantiate_cond_stage(self, config):
         if not self.cond_stage_trainable:
@@ -1440,9 +1440,9 @@ class LatentUpscaleDiffusion(LatentDiffusion):
     def instantiate_low_stage(self, config):
         model = instantiate_from_config(config)
         self.low_scale_model = model.eval()
-        # self.low_scale_model.train = disabled_train
+        self.low_scale_model.train = disabled_train
         for param in self.low_scale_model.parameters():
-            param.requires_grad = True
+            param.requires_grad = False
 
     @torch.no_grad()
     def get_input(self, batch, k, cond_key=None, bs=None, log_mode=False):
@@ -1829,9 +1829,9 @@ class LatentUpscaleFinetuneDiffusion(LatentFinetuneDiffusion):
     def instantiate_low_stage(self, config):
         model = instantiate_from_config(config)
         self.low_scale_model = model.eval()
-        # self.low_scale_model.train = disabled_train
+        self.low_scale_model.train = disabled_train
         for param in self.low_scale_model.parameters():
-            param.requires_grad = True
+            param.requires_grad = False
 
     @torch.no_grad()
     def get_input(self, batch, k, cond_key=None, bs=None, return_first_stage_outputs=False):

@@ -1,5 +1,5 @@
 model:
-  base_learning_rate: 1.0e-06
+  base_learning_rate: 1.0e-05
   target: cldm.cldm.ControlLDM
   params:
     linear_start: 0.00085
@@ -32,7 +32,7 @@ model:
         image_size: 32
         in_channels: 13
         hint_channels: 3
-        model_channels: 160
+        model_channels: 320
         attention_resolutions: [ 4, 2, 1 ]
         num_res_blocks: 2
         channel_mult: [ 1, 2, 4, 4 ]
@@ -59,7 +59,7 @@ model:
         image_size: 32
         in_channels: 13
         out_channels: 4
-        model_channels: 160
+        model_channels: 320
         attention_resolutions: [ 4, 2, 1 ]
         num_res_blocks: 2
         channel_mult: [ 1, 2, 4, 4 ]
@@ -76,6 +76,7 @@ model:
       params:
         embed_dim: 4
         monitor: val/rec_loss
+        ckpt_path: models/first_stage_models/kl-f8/model.ckpt
         ddconfig:
           double_z: true
           z_channels: 4
@@ -107,7 +108,7 @@ log_images_kwargs:
 
 lightning:
   trainer:
-    max_epochs: 100
+    max_epochs: 500
     num_nodes: 1
     accumulate_grad_batches: 6
     accelerator: 'gpu'
@@ -117,14 +118,14 @@ lightning:
 data:
   target: main.DataModuleFromConfig
   params:
-      batch_size: 6
+      batch_size: 4
       wrap: False
       train:
           target: dataset.VITONHDDataset
           params:
               data_root_dir: ./data/zalando-hd-resized
-              img_H: 256
-              img_W: 192
+              img_H: 512
+              img_W: 384
               is_paired: True
               is_test: False
               is_sorted: False
@@ -132,8 +133,8 @@ data:
           target: dataset.VITONHDDataset
           params:
               data_root_dir: ./data/zalando-hd-resized
-              img_H: 256
-              img_W: 192
+              img_H: 512
+              img_W: 384
               is_paired: True
               is_test: True
               is_sorted: True
@@ -141,8 +142,8 @@ data:
           target: dataset.VITONHDDataset
           params:
               data_root_dir: ./data/zalando-hd-resized
-              img_H: 256
-              img_W: 192
+              img_H: 512
+              img_W: 384
               is_paired: True
               is_test: True
               is_sorted: True
